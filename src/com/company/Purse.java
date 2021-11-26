@@ -1,5 +1,9 @@
 package com.company;
 
+import java.util.Arrays;
+import java.util.Scanner;
+import java.util.stream.Stream;
+
 public class Purse {
 
     private int[] userPIN;
@@ -40,14 +44,66 @@ public class Purse {
         this(userPIN,adminPIN,MAX_USER_TRIES,MAX_ADMIN_TRIES,MAX_TRANS,MAX_BALANCE,MAX_CREDIT_AMOUNT,MAX_DEBIT_AMOUNT);
     }
 
-    boolean verifyPINUser(int[] PINCode){return false;}
-    boolean verifyPINAdmin(int[] PINCode){return false;}
-    private boolean getIdentificationAdmin(){return false;}
-    private boolean getIdentificationUser(){return false;}
-    void PINChangeUnblock(){}
-    void beginTransactionDebit(int amount){}
-    void beginTransactionCredit(int amount){}
-    void commitTransactionDebit(){}
-    void commitTransactionCredit(){}
-    int getData(){return 0;}
+    boolean verifyPINUser(int[] PINCode){
+        return Arrays.equals(userPIN,PINCode);
+
+    }
+    boolean verifyPINAdmin(int[] PINCode){
+        return Arrays.equals(adminPIN,PINCode);
+    }
+
+    private int[] askCode(){
+        Scanner scanner = new Scanner(System.in);
+        String input = scanner.next("\\d+");
+        return input.chars().map(a -> a-((int)'0')).toArray();
+    }
+
+    private boolean getIdentificationUser(){
+
+        boolean good = verifyPINUser(askCode());
+
+        if(!good)userTriesLeft--;
+        else userTriesLeft = MAX_USER_TRIES;
+
+        if(userTriesLeft == 0)lifeCycleState = LCS.BLOCKED;
+
+        return good;
+    }
+
+    private boolean getIdentificationAdmin(){
+
+        boolean good = verifyPINAdmin(askCode());
+
+        if(good){
+            PINChangeUnblock();
+        }else{
+            adminTriesLeft--;
+        }
+        if(adminTriesLeft == 0)lifeCycleState = LCS.DEAD;
+
+        return good;
+    }
+
+    void PINChangeUnblock(){
+        lifeCycleState = LCS.USE;
+        adminTriesLeft = MAX_ADMIN_TRIES;
+        userTriesLeft = MAX_USER_TRIES;
+    }
+    void beginTransactionDebit(int amount){
+        if(amount > maxDebitAmount || balance - amount < 0)return;
+        balance -= amount;
+    }
+    void beginTransactionCredit(int amount){
+        if(amount > maxCreditAmount || balance + amount > maxBalance)return;
+        balance += amount;
+    }
+    void commitTransactionDebit(){
+        transLeft--;
+    }
+    void commitTransactionCredit(){
+        transLeft--;
+    }
+    int getData(){
+        return 0;
+    }
 }
