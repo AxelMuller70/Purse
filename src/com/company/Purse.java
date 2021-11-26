@@ -104,6 +104,6 @@ public class Purse {
         transLeft--;
     }
     int getData(){
-        return 0;
+        return balance;
     }
 }
