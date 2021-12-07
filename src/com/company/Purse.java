@@ -2,9 +2,12 @@ package com.company;
 
 import java.util.Arrays;
 import java.util.Scanner;
-import java.util.stream.Stream;
 
 public class Purse {
+
+    public enum LCS {
+        PRE_PERSO, USE, BLOCKED, DEAD
+    }
 
     private int[] userPIN;
     private int[] adminPIN;
@@ -28,6 +31,7 @@ public class Purse {
     private boolean userAuthenticate;
     private boolean adminAuthenticate;
     private LCS lifeCycleState;
+    private boolean inTransaction;
 
     public Purse(int[] userPIN, int[] adminPIN, int MAX_USER_TRIES, int MAX_ADMIN_TRIES, int MAX_TRANS, int MAX_BALANCE, int MAX_CREDIT_AMOUNT, int MAX_DEBIT_AMOUNT) {
         this.userPIN = userPIN;
@@ -38,11 +42,11 @@ public class Purse {
         this.maxBalance = MAX_BALANCE;
         this.maxCreditAmount = MAX_CREDIT_AMOUNT;
         this.maxDebitAmount = MAX_DEBIT_AMOUNT;
-        //this.lifeCycleState = LCS.BLOCKED; //attention
-        this.lifeCycleState = LCS.BLOCKED; //attention
+        this.lifeCycleState = LCS.USE;
         this.balance = 0;
         this.userTriesLeft = MAX_USER_TRIES;
         this.adminTriesLeft = MAX_ADMIN_TRIES;
+        this.inTransaction = false;
     }
 
     public Purse( int[] userPIN, int[] adminPIN){
@@ -64,27 +68,37 @@ public class Purse {
 
     private boolean getIdentificationUser(){
 
-        boolean good = verifyPINUser(askCode());
+        System.out.print("Votre code pin: ");
+        userAuthenticate = verifyPINUser(askCode());
 
-        if(!good)userTriesLeft--;
-        else userTriesLeft = MAX_USER_TRIES;
+        if(userAuthenticate){
+            userTriesLeft = maxUserTries;
+        }else{
+            userTriesLeft--;
+        }
 
-        if(userTriesLeft == 0)lifeCycleState = LCS.BLOCKED;
+        if(userTriesLeft == 0){
+            lifeCycleState = LCS.BLOCKED;
+        }
 
-        return good;
+        //if(lifeCycleState != LCS.DEAD && !userAuthenticate && getIdentificationAdmin())getIdentificationUser();
+
+        return userAuthenticate;
     }
 
     private boolean getIdentificationAdmin(){
-        boolean good = verifyPINAdmin(askCode());
 
-        if(good){
-            PINChangeUnblock();
+        System.out.print("Code PIN admin : ");
+        adminAuthenticate = verifyPINAdmin(askCode());
+
+        if(adminAuthenticate){
+            adminTriesLeft = maxAdminTries;
         }else{
             adminTriesLeft--;
         }
         if(adminTriesLeft == 0)lifeCycleState = LCS.DEAD;
 
-        return good;
+        return adminAuthenticate;
     }
     // Pas fonctionnel
     void PINChangeUnblock(){
@@ -94,71 +108,89 @@ public class Purse {
                 if(adminTriesLeft < MAX_ADMIN_TRIES){
                     System.out.println("Mot de passe erroné");
                 }
-                System.out.print("Code PIN admin : ");
                 auth = this.getIdentificationAdmin();
-                System.out.println(auth + "++++++++");
 
             }while(!(auth && adminTriesLeft > 0) && adminTriesLeft > 0);
             if(auth && adminTriesLeft > 0){
                 lifeCycleState = LCS.USE;
                 adminTriesLeft = MAX_ADMIN_TRIES;
                 userTriesLeft = MAX_USER_TRIES;
+                System.out.println("Carte débloquée");
             }else {
                 lifeCycleState = LCS.DEAD;
                 System.out.println("Purse DEAD");
             }
-        }else {
-            System.out.println("Purse non BLOQUE");
+        }else if(lifeCycleState == LCS.USE){
+            System.out.println("Carte débloquée");
+        }else if(lifeCycleState == LCS.DEAD){
+            System.out.println("Carte débloquée");
         }
     }
-    //attention montant négatif
-    void beginTransactionDebit(int amount){
-        if(!(amount > maxDebitAmount || balance - amount < 0) || !(amount < 0)){
-            if(lifeCycleState != LCS.USE){
-                System.out.println("Purse INVALIDE");
-            }else{
-                balance -= amount;
-            }
-        }else{
-            System.out.println("");
-            System.out.println("Débit impossible");
-        }
 
+    void beginTransactionDebit(int amount){
+
+        if(amount <= 0){
+            System.out.println("Pas de montant nul ou négatif");return;}
+        if(balance - amount < 0){
+            System.out.println("Montant trop élevé");return;}
+        if(amount > maxDebitAmount){
+            System.out.println("Plafond dépassé");return;}
+        if(lifeCycleState != LCS.USE){
+            System.out.println("Purse INVALIDE");
+        }else{
+            balance -= amount;
+            inTransaction = true;
+        }
     }
     void beginTransactionCredit(int amount){
-        if(!(amount > maxCreditAmount || balance + amount > maxBalance)){
-            boolean auth;
-            if(lifeCycleState != LCS.USE){
-                System.out.println("");
-                System.out.println("Purse INVALIDE");
-            }else{
-                do{
-                    if(userTriesLeft < MAX_USER_TRIES){
-                        System.out.println("Mot de passe erroné");
-                        System.out.print("Votre code pin: ");
-                    }
-                    auth = this.getIdentificationUser();
 
-                }while(!(auth && userTriesLeft > 0) && userTriesLeft > 0);
-                if(auth && userTriesLeft > 0){
-                   balance += amount;
-                }else {
-                    System.out.println("Nombre d'essai dépassé. Purse BLOQUE ");
-                }
-            }
-        }else{
+        if(amount <= 0){
+            System.out.println("Pas de montant nul ou négatif");return;}
+        if(amount > maxCreditAmount){
+            System.out.println("montant trop élevé");return;}
+        if(balance + amount > maxBalance) {
+            System.out.println("Plafond dépassé");return;}
+
+        boolean auth;
+        if(lifeCycleState != LCS.USE){
             System.out.println("");
-            System.out.println("Plafond dépassé ou montant trop élevé");
-        }
+            System.out.println("Purse INVALIDE");
+        }else{
+            do{
+                if(userTriesLeft < MAX_USER_TRIES){
+                    System.out.println("Mot de passe erroné");
+                }
+                auth = this.getIdentificationUser();
 
+            }while(!(auth && userTriesLeft > 0) && userTriesLeft > 0);
+            if(auth && userTriesLeft > 0){
+               balance += amount;
+               inTransaction = true;
+            }else {
+                System.out.println("Nombre d'essai dépassé. Purse BLOQUE (débloquer dans le menu principal) ");
+            }
+        }
     }
     void commitTransactionDebit(){
         transLeft--;
+        inTransaction = false;
+        if(transLeft == 0)lifeCycleState = LCS.DEAD;
     }
     void commitTransactionCredit(){
         transLeft--;
+        inTransaction = false;
+        if(transLeft == 0)lifeCycleState = LCS.DEAD;
     }
+
     int getData(){
         return balance;
+    }
+
+    void reset(){
+        if(inTransaction)abortTransaction();
+    }
+
+    void abortTransaction(){
+        //TODO ...
     }
 }

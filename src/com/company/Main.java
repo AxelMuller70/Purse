@@ -3,6 +3,31 @@ package com.company;
 import java.net.SocketOption;
 import java.util.Scanner;
 
+class Portail {
+
+    public void presentation(){
+        System.out.println("***********************************************************");
+        System.out.println("               GUICHET D' OPERATION DE PURSE               ");
+        System.out.println("***********************************************************");
+    }
+    public void ecranAccueil(){
+        this.presentation();
+        System.out.println("\t 1- Créditer mon purse");
+        System.out.println("\t 2- Débiter mon purse");
+        System.out.println("\t 3- Débloquer le purse");
+        System.out.println("\t 4- Mon solde");
+    }
+    public int choixOperation(){
+        Scanner sc = new Scanner(System.in);
+        int op;
+        do{
+            System.out.print("Veuillez choisir le numéro de votre opération : ");
+            op = sc.nextInt();
+        }while (op != 1 && op != 2 && op != 3 && op != 4);
+        return op;
+    }
+}
+
 public class Main {
 
     public static void main(String[] args) {
@@ -22,7 +47,6 @@ public class Main {
                     Scanner sc = new Scanner(System.in);
                     System.out.print("Votre montant : ");
                     int montant = sc.nextInt();
-                    System.out.print("Votre code pin: ");
                     purse.beginTransactionCredit(montant);
                     purse.commitTransactionCredit();
                     break;
@@ -31,14 +55,12 @@ public class Main {
                     System.out.print("Montant à débiter : ");
                     int montantd = scd.nextInt();
                     purse.beginTransactionDebit(montantd);
-                    purse.commitTransactionCredit();
+                    purse.commitTransactionDebit();
                     break;
                 case 3 : // débloquer la carte
-                   // purse.PINChangeUnblock();
+                    purse.PINChangeUnblock();
                     break;
-                case 4 :// état de la carte
-                    break;
-                case 5 :// Mon solde
+                case 4 :// Mon solde
                     System.out.println("Mon solde est : "+ purse.getData() + " euro(s)");
                     break;
                 default:
